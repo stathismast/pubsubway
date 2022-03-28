@@ -1,1 +1,2 @@
-python server.py & sleep 0.5; python client.py
+python broker.py & sleep 0.5;
+python publisher.py;
