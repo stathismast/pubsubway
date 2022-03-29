@@ -2,11 +2,11 @@ import socket
 from time import sleep
 
 SERVER_IP = "127.0.0.1"
-SERVER_PORT = 8000
+SERVER_PORT = 9000
 CLIENT_IP = "127.0.0.1"
-CLIENT_PORT = 8001
+CLIENT_PORT = 9001
 EOT_CHAR = b"\4"
-ID = "p1"
+ID = "s1"
 
 def log(message):
   print(f"[{ID}]\t " + message);
@@ -25,29 +25,31 @@ def send_message(message):
     # Wait for OK response
     return s.recv(1024)
 
-def publish(topic, message):
-  log(f"Sending message \"{message}\" to topic \"{topic}\"")
-  response = send_message(ID + " pub " + topic + " " + message)
+def subscribe(topic):
+  log(f"Subscribing to topic \"{topic}\"")
+  response = send_message(ID + " sub " + topic)
+  log(f"Received {response.decode()}")
+
+def unsubscribe(topic):
+  log(f"Unsubscribing from topic \"{topic}\"")
+  response = send_message(ID + " unsub " + topic)
   log(f"Received {response.decode()}")
 
 def checkCommand(command):
-  return not command[0].isdigit() or int(command[0]) < 0 or len(command) < 4 or command[1] != "pub"
+  return not command[0].isdigit() or int(command[0]) < 0 or len(command) != 3 or (command[1] != "sub" and command[1] != "unsub")
 
 def handleCommand(command):
-  command = [command[0], command[1], command[2], ' '.join(command[3:])]
   topic = command[2]
-  message = ' '.join(command[3:])
   if(int(command[0]) > 0):
     log(f"Waiting {command[0]} second(s)...")
     sleep(int(command[0]))
-  publish(topic, message)
+  subscribe(topic) if command[1] == "sub" else unsubscribe(topic)
 
-publish("#hello", "This is the first message")
 while True:
   log("Enter command:")
   command = input().split(" ")
   while checkCommand(command):
     log("Invalid command")
-    log("Use: <wait time> pub <topic> <message>")
+    log("Use: <wait time> <sub/unsub> <topic>")
     command = input().split(" ")
   handleCommand(command)
