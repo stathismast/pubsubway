@@ -9,7 +9,7 @@ EOT_CHAR = b"\4"
 ID = "p1"
 
 def log(message):
-  print(f"[{ID}]\t " + message);
+  print(f"[Pub {ID}] " + message);
 
 def send_message(message):
   with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -30,10 +30,10 @@ def publish(topic, message):
   response = send_message(ID + " pub " + topic + " " + message)
   log(f"Received {response.decode()}")
 
-def checkCommand(command):
+def check_command(command):
   return not command[0].isdigit() or int(command[0]) < 0 or len(command) < 4 or command[1] != "pub"
 
-def handleCommand(command):
+def handle_command(command):
   command = [command[0], command[1], command[2], ' '.join(command[3:])]
   topic = command[2]
   message = ' '.join(command[3:])
@@ -42,12 +42,11 @@ def handleCommand(command):
     sleep(int(command[0]))
   publish(topic, message)
 
-publish("#hello", "This is the first message")
 while True:
   log("Enter command:")
   command = input().split(" ")
-  while checkCommand(command):
+  while check_command(command):
     log("Invalid command")
     log("Use: <wait time> pub <topic> <message>")
     command = input().split(" ")
-  handleCommand(command)
+  handle_command(command)
