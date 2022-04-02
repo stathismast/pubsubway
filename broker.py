@@ -21,6 +21,31 @@ def handle_pub_message(data):
   topic = data[2]
   message = data[3]
   log(f"Publisher {pub_id} sent message \"{message}\" to topic \"{topic}\"")
+  for sub in subscriptions:
+    if sub['topic'] == topic:
+      log(f"Sending message \"{message}\" to {sub['id']} @ {sub['ip']}:{sub['port']}")
+      send_message(message, sub['ip'], sub['port'])
+
+def send_message(message, ip, port):
+  with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    # Setup socket and connect
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind((HOST, SUB_PORT))
+    connected = False
+    while not connected:
+      try:
+        s.connect((ip, port+1))
+        connected = True
+      except:
+        log("Error on connection. Retrying in 30 seconds...")
+        sleep(30)
+
+    # Send message
+    message = bytes(message, 'UTF-8')
+    s.sendall(message + EOT_CHAR)
+
+    # Wait for OK response
+    # return s.recv(1024).decode()
 
 def pubthread():
   log(f"Publisher thread is up at port {PUB_PORT}")
@@ -93,7 +118,6 @@ def subthread():
         # Send OK response
         conn.sendall(b"OK")
       handle_sub_message(data, addr)
-
 
 log("Broker process started")
 try:
