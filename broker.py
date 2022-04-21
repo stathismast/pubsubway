@@ -9,6 +9,7 @@ SUB_PORT = 9000      # port that listens for messages from subscribers
 DUAL_PORT_OFFSET = 1 # offset for port sends messages to subscribers
 EOT_CHAR = b"\4"
 BUFFER_SIZE = 1024
+VERBOSE = False
 
 subscriptions = []
 
@@ -21,11 +22,13 @@ def handle_pub_message(data):
   pub_id = data[0]
   topic = data[2]
   message = data[3]
-  log(f"Publisher {pub_id} sent message \"{message}\" to topic \"{topic}\"")
+  sub_count = 0
   for sub in subscriptions:
     if sub['topic'] == topic:
-      log(f"Sending message \"{message}\" to {sub['id']} @ {sub['ip']}:{sub['port']}")
+      sub_count += 1
+      if VERBOSE: log(f"Sending message \"{message}\" to {sub['id']} @ {sub['ip']}:{sub['port']}")
       send_message(message, sub['ip'], sub['port'])
+  log(f"{pub_id} published to {topic} ({sub_count} subs): {message}")
 
 def send_message(message, ip, port):
   with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -62,7 +65,7 @@ def pubthread():
       conn, addr = s.accept()
       data = b""
       with conn:
-        log(f"Publisher connected from {addr[0]}:{addr[1]}")
+        if VERBOSE: log(f"Publisher connected from {addr[0]}:{addr[1]}")
         # Loop through connections until we get the EOT_CHAR (end-of-transmission)
         while True:
           data += conn.recv(BUFFER_SIZE)
@@ -88,12 +91,12 @@ def handle_sub_message(data, addr):
   action = data[1]
   topic = data[2]
   logging_output = "subscribed to" if action == "sub" else "unsubscribed from"
-  log(f"Subscriber {sub_id} {logging_output} topic \"{topic}\"")
+  log(f"{sub_id} {logging_output} {topic}")
   if action == "sub":
     subscribe(sub_id, topic, addr[0], addr[1])
   else:
     unsubscribe(sub_id, topic)
-  log(str(subscriptions))
+  if VERBOSE: log("Current subs: " + str(subscriptions))
 
 def subthread():
   log(f"Subscriber thread is up at port {SUB_PORT}")
@@ -109,7 +112,7 @@ def subthread():
       conn, addr = s.accept()
       data = b""
       with conn:
-        log(f"Publisher connected from {addr[0]}:{addr[1]}")
+        if VERBOSE: log(f"Subscriber connected from {addr[0]}:{addr[1]}")
         # Loop through connections until we get the EOT_CHAR (end-of-transmission)
         while True:
           data += conn.recv(BUFFER_SIZE)

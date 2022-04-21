@@ -10,6 +10,7 @@ CLIENT_PORT = 9100   # port to send messages to broker
 DUAL_PORT_OFFSET = 1 # offset for port that receives messages from broker
 EOT_CHAR = b"\4"
 ID = "s1"
+VERBOSE = False
 
 def log(message):
   print(f"[Sub {ID}] " + message);
@@ -36,14 +37,14 @@ def send_message(message):
     return s.recv(1024).decode()
 
 def subscribe(topic):
-  log(f"Subscribing to topic \"{topic}\"")
+  log(f"Subscribing to {topic}")
   response = send_message(ID + " sub " + topic)
-  log(f"Received {response}")
+  if VERBOSE: log(f"Received {response}")
 
 def unsubscribe(topic):
-  log(f"Unsubscribing from topic \"{topic}\"")
+  log(f"Unsubscribing from {topic}")
   response = send_message(ID + " unsub " + topic)
-  log(f"Received {response}")
+  if VERBOSE: log(f"Received {response}")
 
 def check_command(command):
   return not command[0].isdigit() or int(command[0]) < 0 or len(command) != 3 or (command[1] != "sub" and command[1] != "unsub")
@@ -51,7 +52,7 @@ def check_command(command):
 def handle_command(command):
   topic = command[2]
   if(int(command[0]) > 0):
-    log(f"Waiting {command[0]} second(s)...")
+    if VERBOSE: log(f"Waiting {command[0]} second(s)...")
     sleep(int(command[0]))
   subscribe(topic) if command[1] == "sub" else unsubscribe(topic)
 
@@ -64,7 +65,7 @@ def handle_command_file():
     command_file = open(filename, "r").readlines()
     for command in command_file:
       command = command.replace("\n", "")
-      log(f"Running command from file: \"{command}\"")
+      if VERBOSE: log(f"Running command from file: \"{command}\"")
       command = command.split(" ")
       handle_command(command)
 
@@ -94,7 +95,6 @@ def receiver():
       conn, addr = s.accept()
       data = b""
       with conn:
-        log(f"Publisher connected from {addr[0]}:{addr[1]}")
         # Loop through connections until we get the EOT_CHAR (end-of-transmission)
         while True:
           data += conn.recv(1024)

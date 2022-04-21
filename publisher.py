@@ -8,6 +8,7 @@ CLIENT_IP = "127.0.0.1"
 CLIENT_PORT = 8001
 EOT_CHAR = b"\4"
 ID = "p1"
+VERBOSE = False
 
 def log(message):
   print(f"[Pub {ID}] " + message);
@@ -27,9 +28,9 @@ def send_message(message):
     return s.recv(1024)
 
 def publish(topic, message):
-  log(f"Sending message \"{message}\" to topic \"{topic}\"")
+  log(f"Publishing to {topic}: {message}")
   response = send_message(ID + " pub " + topic + " " + message)
-  log(f"Received {response.decode()}")
+  if VERBOSE: log(f"Received {response.decode()} from broker")
 
 def check_command(command):
   return not command[0].isdigit() or int(command[0]) < 0 or len(command) < 4 or command[1] != "pub"
@@ -39,7 +40,7 @@ def handle_command(command):
   topic = command[2]
   message = ' '.join(command[3:])
   if(int(command[0]) > 0):
-    log(f"Waiting {command[0]} second(s)...")
+    if VERBOSE: log(f"Waiting {command[0]} second(s)...")
     sleep(int(command[0]))
   publish(topic, message)
 
@@ -52,7 +53,7 @@ def handle_command_file():
     command_file = open(filename, "r").readlines()
     for command in command_file:
       command = command.replace("\n", "")
-      log(f"Running command from file: \"{command}\"")
+      if VERBOSE: log(f"Running command from file: \"{command}\"")
       command = command.split(" ")
       handle_command(command)
 
@@ -66,5 +67,6 @@ def handle_cli_commands():
       command = input().split(" ")
     handle_command(command)
 
+log("Publisher process started")
 handle_command_file()
 handle_cli_commands()
