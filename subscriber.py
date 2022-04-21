@@ -6,7 +6,8 @@ import threading
 SERVER_IP = "127.0.0.1"
 SERVER_PORT = 9000
 CLIENT_IP = "127.0.0.1"
-CLIENT_PORT = 9001
+CLIENT_PORT = 9100   # port to send messages to broker
+DUAL_PORT_OFFSET = 1 # offset for port that receives messages from broker
 EOT_CHAR = b"\4"
 ID = "s1"
 
@@ -55,7 +56,6 @@ def handle_command(command):
   subscribe(topic) if command[1] == "sub" else unsubscribe(topic)
 
 def handle_command_file():
-  # Handle single command file
   filename = None
   if len(argv) > 1:
     filename = argv[1]
@@ -87,7 +87,7 @@ def receiver():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
       # Setup socket and listen for connections
       s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-      s.bind((CLIENT_IP, CLIENT_PORT+1))
+      s.bind((CLIENT_IP, CLIENT_PORT + DUAL_PORT_OFFSET))
       s.listen()
 
       # Accept connections

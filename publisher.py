@@ -1,5 +1,6 @@
 import socket
 from time import sleep
+from sys import argv
 
 SERVER_IP = "127.0.0.1"
 SERVER_PORT = 8000
@@ -42,11 +43,28 @@ def handle_command(command):
     sleep(int(command[0]))
   publish(topic, message)
 
-while True:
-  log("Enter command:")
-  command = input().split(" ")
-  while check_command(command):
-    log("Invalid command")
-    log("Use: <wait time> pub <topic> <message>")
+def handle_command_file():
+  filename = None
+  if len(argv) > 1:
+    filename = argv[1]
+
+  if filename:
+    command_file = open(filename, "r").readlines()
+    for command in command_file:
+      command = command.replace("\n", "")
+      log(f"Running command from file: \"{command}\"")
+      command = command.split(" ")
+      handle_command(command)
+
+def handle_cli_commands():
+  while True:
+    log("Enter command:")
     command = input().split(" ")
-  handle_command(command)
+    while check_command(command):
+      log("Invalid command")
+      log("Use: <wait time> <sub/unsub> <topic>")
+      command = input().split(" ")
+    handle_command(command)
+
+handle_command_file()
+handle_cli_commands()

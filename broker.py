@@ -4,8 +4,9 @@ from time import sleep
 import sys
 
 HOST = "127.0.0.1"
-PUB_PORT = 8000
-SUB_PORT = 9000
+PUB_PORT = 8000      # port that listens for messages from publishers
+SUB_PORT = 9000      # port that listens for messages from subscribers
+DUAL_PORT_OFFSET = 1 # offset for port sends messages to subscribers
 EOT_CHAR = b"\4"
 BUFFER_SIZE = 1024
 
@@ -30,11 +31,11 @@ def send_message(message, ip, port):
   with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # Setup socket and connect
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind((HOST, SUB_PORT))
+    s.bind((HOST, SUB_PORT + DUAL_PORT_OFFSET))
     connected = False
     while not connected:
       try:
-        s.connect((ip, port+1))
+        s.connect((ip, port + DUAL_PORT_OFFSET))
         connected = True
       except:
         log("Error on connection. Retrying in 30 seconds...")
