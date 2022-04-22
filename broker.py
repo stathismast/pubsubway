@@ -3,13 +3,14 @@ import threading
 from time import sleep
 import sys
 
-HOST = "127.0.0.1"
-PUB_PORT = 8000      # port that listens for messages from publishers
-SUB_PORT = 9000      # port that listens for messages from subscribers
-DUAL_PORT_OFFSET = 1 # offset for port sends messages to subscribers
+host = "127.0.0.1"
+pub_port = 8000      # port that listens for messages from publishers
+sub_port = 9000      # port that listens for messages from subscribers
+port_offset = 1 # offset for port sends messages to subscribers
+verbose = False
+
 EOT_CHAR = b"\4"
 BUFFER_SIZE = 1024
-VERBOSE = False
 
 subscriptions = []
 
@@ -26,7 +27,7 @@ def handle_pub_message(data):
   for sub in subscriptions:
     if sub['topic'] == topic:
       sub_count += 1
-      if VERBOSE: log(f"Sending message \"{message}\" to {sub['id']} @ {sub['ip']}:{sub['port']}")
+      if verbose: log(f"Sending message \"{message}\" to {sub['id']} @ {sub['ip']}:{sub['port']}")
       send_message(message, sub['ip'], sub['port'])
   log(f"{pub_id} published to {topic} ({sub_count} subs): {message}")
 
@@ -34,11 +35,11 @@ def send_message(message, ip, port):
   with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # Setup socket and connect
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind((HOST, SUB_PORT + DUAL_PORT_OFFSET))
+    s.bind((host, sub_port + port_offset))
     connected = False
     while not connected:
       try:
-        s.connect((ip, port + DUAL_PORT_OFFSET))
+        s.connect((ip, port + port_offset))
         connected = True
       except:
         log("Error on connection. Retrying in 30 seconds...")
@@ -49,23 +50,23 @@ def send_message(message, ip, port):
     s.sendall(message + EOT_CHAR)
 
     # Wait for OK response
-    # return s.recv(1024).decode()
+    # return s.recv(BUFFER_SIZE).decode()
 
 def pubthread():
-  log(f"Publisher thread is up at port {PUB_PORT}")
+  log(f"Publisher thread is up at port {pub_port}")
 
   while True:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
       # Setup socket and listen for connections
       s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-      s.bind((HOST, PUB_PORT))
+      s.bind((host, pub_port))
       s.listen()
 
       # Accept connections
       conn, addr = s.accept()
       data = b""
       with conn:
-        if VERBOSE: log(f"Publisher connected from {addr[0]}:{addr[1]}")
+        if verbose: log(f"Publisher connected from {addr[0]}:{addr[1]}")
         # Loop through connections until we get the EOT_CHAR (end-of-transmission)
         while True:
           data += conn.recv(BUFFER_SIZE)
@@ -96,23 +97,23 @@ def handle_sub_message(data, addr):
     subscribe(sub_id, topic, addr[0], addr[1])
   else:
     unsubscribe(sub_id, topic)
-  if VERBOSE: log("Current subs: " + str(subscriptions))
+  if verbose: log("Current subs: " + str(subscriptions))
 
 def subthread():
-  log(f"Subscriber thread is up at port {SUB_PORT}")
+  log(f"Subscriber thread is up at port {sub_port}")
 
   while True:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
       # Setup socket and listen for connections
       s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-      s.bind((HOST, SUB_PORT))
+      s.bind((host, sub_port))
       s.listen()
 
       # Accept connections
       conn, addr = s.accept()
       data = b""
       with conn:
-        if VERBOSE: log(f"Subscriber connected from {addr[0]}:{addr[1]}")
+        if verbose: log(f"Subscriber connected from {addr[0]}:{addr[1]}")
         # Loop through connections until we get the EOT_CHAR (end-of-transmission)
         while True:
           data += conn.recv(BUFFER_SIZE)

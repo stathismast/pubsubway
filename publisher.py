@@ -2,35 +2,37 @@ import socket
 from time import sleep
 from sys import argv
 
-SERVER_IP = "127.0.0.1"
-SERVER_PORT = 8000
-CLIENT_IP = "127.0.0.1"
-CLIENT_PORT = 8001
+id = "p1"
+client_ip = "127.0.0.1"
+client_port = 8001
+server_ip = "127.0.0.1"
+server_port = 8000
+verbose = False
+
 EOT_CHAR = b"\4"
-ID = "p1"
-VERBOSE = False
+BUFFER_SIZE = 1024
 
 def log(message):
-  print(f"[Pub {ID}] " + message);
+  print(f"[Pub {id}] " + message);
 
 def send_message(message):
   with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # Setup socket and connect
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind((CLIENT_IP, CLIENT_PORT))
-    s.connect((SERVER_IP, SERVER_PORT))
+    s.bind((client_ip, client_port))
+    s.connect((server_ip, server_port))
 
     # Send message
     message = bytes(message, 'UTF-8')
     s.sendall(message + EOT_CHAR)
 
     # Wait for OK response
-    return s.recv(1024)
+    return s.recv(BUFFER_SIZE)
 
 def publish(topic, message):
   log(f"Publishing to {topic}: {message}")
-  response = send_message(ID + " pub " + topic + " " + message)
-  if VERBOSE: log(f"Received {response.decode()} from broker")
+  response = send_message(id + " pub " + topic + " " + message)
+  if verbose: log(f"Received {response.decode()} from broker")
 
 def check_command(command):
   return not command[0].isdigit() or int(command[0]) < 0 or len(command) < 4 or command[1] != "pub"
@@ -40,7 +42,7 @@ def handle_command(command):
   topic = command[2]
   message = ' '.join(command[3:])
   if(int(command[0]) > 0):
-    if VERBOSE: log(f"Waiting {command[0]} second(s)...")
+    if verbose: log(f"Waiting {command[0]} second(s)...")
     sleep(int(command[0]))
   publish(topic, message)
 
@@ -53,7 +55,7 @@ def handle_command_file():
     command_file = open(filename, "r").readlines()
     for command in command_file:
       command = command.replace("\n", "")
-      if VERBOSE: log(f"Running command from file: \"{command}\"")
+      if verbose: log(f"Running command from file: \"{command}\"")
       command = command.split(" ")
       handle_command(command)
 

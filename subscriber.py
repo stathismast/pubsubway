@@ -1,29 +1,34 @@
+from http import client
 import socket
 from time import sleep
 from sys import argv, exit
 import threading
 
-SERVER_IP = "127.0.0.1"
-SERVER_PORT = 9000
-CLIENT_IP = "127.0.0.1"
-CLIENT_PORT = 9100   # port to send messages to broker
-DUAL_PORT_OFFSET = 1 # offset for port that receives messages from broker
+id = None
+client_ip = "127.0.0.1"
+client_port = None
+server_ip = None
+server_port = None
+command_file = None
+port_offset = 1
+verbose = False
+
 EOT_CHAR = b"\4"
-ID = "s1"
-VERBOSE = False
+BUFFER_SIZE = 1024
+
 
 def log(message):
-  print(f"[Sub {ID}] " + message);
+  print(f"[Sub {id}] " + message);
 
 def send_message(message):
   with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # Setup socket and connect
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind((CLIENT_IP, CLIENT_PORT))
+    s.bind((client_ip, client_port))
     connected = False
     while not connected:
       try:
-        s.connect((SERVER_IP, SERVER_PORT))
+        s.connect((server_ip, server_port))
         connected = True
       except:
         log("Error on connection. Retrying in 30 seconds...")
@@ -34,17 +39,17 @@ def send_message(message):
     s.sendall(message + EOT_CHAR)
 
     # Wait for OK response
-    return s.recv(1024).decode()
+    return s.recv(BUFFER_SIZE).decode()
 
 def subscribe(topic):
   log(f"Subscribing to {topic}")
-  response = send_message(ID + " sub " + topic)
-  if VERBOSE: log(f"Received {response}")
+  response = send_message(id + " sub " + topic)
+  if verbose: log(f"Received {response}")
 
 def unsubscribe(topic):
   log(f"Unsubscribing from {topic}")
-  response = send_message(ID + " unsub " + topic)
-  if VERBOSE: log(f"Received {response}")
+  response = send_message(id + " unsub " + topic)
+  if verbose: log(f"Received {response}")
 
 def check_command(command):
   return not command[0].isdigit() or int(command[0]) < 0 or len(command) != 3 or (command[1] != "sub" and command[1] != "unsub")
@@ -52,22 +57,17 @@ def check_command(command):
 def handle_command(command):
   topic = command[2]
   if(int(command[0]) > 0):
-    if VERBOSE: log(f"Waiting {command[0]} second(s)...")
+    if verbose: log(f"Waiting {command[0]} second(s)...")
     sleep(int(command[0]))
   subscribe(topic) if command[1] == "sub" else unsubscribe(topic)
 
 def handle_command_file():
-  filename = None
-  if len(argv) > 1:
-    filename = argv[1]
-
-  if filename:
-    command_file = open(filename, "r").readlines()
-    for command in command_file:
-      command = command.replace("\n", "")
-      if VERBOSE: log(f"Running command from file: \"{command}\"")
-      command = command.split(" ")
-      handle_command(command)
+  file = open(command_file, "r").readlines()
+  for command in file:
+    command = command.replace("\n", "")
+    if verbose: log(f"Running command from file: \"{command}\"")
+    command = command.split(" ")
+    handle_command(command)
 
 def handle_cli_commands():
   while True:
@@ -79,8 +79,122 @@ def handle_cli_commands():
       command = input().split(" ")
     handle_command(command)
 
+def handle_option_id(arguments, i):
+  global id
+  id = arguments[i+1]
+
+def handle_option_client_port(arguments, i):
+  global client_port
+  try:
+    client_port = int(arguments[i+1])
+  except: 
+    print("Invalid port number")
+    return -1
+
+def handle_option_server_ip(arguments, i):
+  global server_ip
+  server_ip = arguments[i+1]
+
+def handle_option_server_port(arguments, i):
+  global server_port
+  try:
+    server_port = int(arguments[i+1])
+  except: 
+    print("Invalid port number")
+    return -1
+
+def handle_option_command_file(arguments, i):
+  global command_file
+  command_file = arguments[i+1]
+
+def handle_option_port_offset(arguments, i):
+  global port_offset
+  try:
+    port_offset = int(arguments[i+1])
+  except: 
+    print("Invalid port number")
+    return -1
+
+def handle_option_verbose(arguments, i):
+  global verbose
+  verbose = True
+  return 1
+  
+
+def handle_command_line_args():
+  global id, client_port, server_ip, server_port, command_file, port_offset, verbose
+
+  options = {
+    "-i": handle_option_id,
+    "-r": handle_option_client_port,
+    "-h": handle_option_server_ip,
+    "-p": handle_option_server_port,
+    "-f": handle_option_command_file,
+    "-o": handle_option_port_offset,
+    "-v": handle_option_verbose,
+  }
+
+  arguments = argv[1:]
+  print(arguments)
+  i = 0
+
+  while i < len(arguments):
+    if arguments[i] in options.keys():
+      try:
+        ret_val = options[arguments[i]](arguments, i)
+      except:
+        print("Invalid input")
+        return -1
+      if ret_val == -1:
+        return -1
+      elif ret_val == 1:
+        i -= 1
+    i += 2
+
+  # i = 0
+  # while i < len(arguments):
+  #   if arguments[i] == "-i":
+  #     id = arguments[i+1]
+  #   elif arguments[i] == "-r":
+  #     try:
+  #       client_port = int(arguments[i+1])
+  #     except: 
+  #       print("Invalid port number")
+  #       return -1
+  #   elif arguments[i] == "-h":
+  #     server_ip = arguments[i+1]
+  #   elif arguments[i] == "-p":
+  #     try:
+  #       server_port = int(arguments[i+1])
+  #     except: 
+  #       print("Invalid port number")
+  #       return -1
+  #   elif arguments[i] == "-f":
+  #     command_file = arguments[i+1]
+  #   elif arguments[i] == "-o":
+  #     try:
+  #       port_offset = int(arguments[i+1])
+  #     except: 
+  #       print("Invalid port number")
+  #       return -1
+  #   elif arguments[i] == "-v":
+  #     verbose = True
+  #     i -= 1
+  #   i += 2
+
+  # id = "s1"
+  # client_port = 9100
+  # server_ip = "127.0.0.1"
+  # server_port = 9000
+  if not id or not client_port or not server_ip or not server_port:
+    print("Arguments missing")
+    return -1
+
+  return 0
+
 def sender():
-  handle_command_file()
+  if command_file:
+    handle_command_file()
   handle_cli_commands()
 
 def receiver():
@@ -88,7 +202,7 @@ def receiver():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
       # Setup socket and listen for connections
       s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-      s.bind((CLIENT_IP, CLIENT_PORT + DUAL_PORT_OFFSET))
+      s.bind((client_ip, client_port + port_offset))
       s.listen()
 
       # Accept connections
@@ -97,7 +211,7 @@ def receiver():
       with conn:
         # Loop through connections until we get the EOT_CHAR (end-of-transmission)
         while True:
-          data += conn.recv(1024)
+          data += conn.recv(BUFFER_SIZE)
           if data[-1] == EOT_CHAR[0]:
             data = data[:-1]
             break
@@ -105,9 +219,13 @@ def receiver():
         # conn.sendall(b"OK")
       log(f"Received message: {data.decode()}")
 
-log("Subscriber process started")
-try:
-  threading.Thread(target=sender).start()
-  threading.Thread(target=receiver).start()
-except KeyboardInterrupt:
-  exit(0)
+ret_val = handle_command_line_args()
+if ret_val != -1:
+  log("Subscriber process started")
+  try:
+    threading.Thread(target=sender).start()
+    threading.Thread(target=receiver).start()
+  except KeyboardInterrupt:
+    exit(0)
+else:
+  print("Use: python subscriber.py -i ID -r sub_port -h broker_IP -p port [-f command_file -o port_offset -v]")
