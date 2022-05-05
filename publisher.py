@@ -5,8 +5,8 @@ from sys import argv
 id = "p1"
 client_ip = "127.0.0.1"
 client_port = 8001
-server_ip = "127.0.0.1"
-server_port = 8000
+server_ip = None
+server_port = None
 verbose = False
 
 EOT_CHAR = b"\4"
@@ -47,28 +47,104 @@ def handle_command(command):
   publish(topic, message)
 
 def handle_command_file():
-  filename = None
-  if len(argv) > 1:
-    filename = argv[1]
-
-  if filename:
-    command_file = open(filename, "r").readlines()
-    for command in command_file:
-      command = command.replace("\n", "")
-      if verbose: log(f"Running command from file: \"{command}\"")
-      command = command.split(" ")
-      handle_command(command)
-
-def handle_cli_commands():
-  while True:
-    log("Enter command:")
-    command = input().split(" ")
-    while check_command(command):
-      log("Invalid command")
-      log("Use: <wait time> <sub/unsub> <topic>")
-      command = input().split(" ")
+  file = open(command_file, "r").readlines()
+  for command in file:
+    command = command.replace("\n", "")
+    if verbose: log(f"Running command from file: \"{command}\"")
+    command = command.split(" ")
     handle_command(command)
 
-log("Publisher process started")
-handle_command_file()
-handle_cli_commands()
+def handle_cli_commands():
+  try:
+    while True:
+      log("Enter command:")
+      command = input()
+      while check_command(command):
+        log("Invalid command")
+        log("Use: <wait time> <pub> <topic> <message>")
+        command = input().split(" ")
+      handle_command(command)
+  except:
+    return
+
+def handle_option_id(arguments, i):
+  global id
+  id = arguments[i+1]
+
+def handle_option_client_port(arguments, i):
+  global client_port
+  try:
+    client_port = int(arguments[i+1])
+  except: 
+    print("Invalid port number")
+    return -1
+
+def handle_option_server_ip(arguments, i):
+  global server_ip
+  server_ip = arguments[i+1]
+
+def handle_option_server_port(arguments, i):
+  global server_port
+  try:
+    server_port = int(arguments[i+1])
+  except: 
+    print("Invalid port number")
+    return -1
+
+def handle_option_command_file(arguments, i):
+  global command_file
+  command_file = arguments[i+1]
+
+def handle_option_port_offset(arguments, i):
+  global port_offset
+  try:
+    port_offset = int(arguments[i+1])
+  except: 
+    print("Invalid port number")
+    return -1
+
+def handle_option_verbose(arguments, i):
+  global verbose
+  verbose = True
+  return 1
+
+def handle_command_line_args():
+
+  options = {
+    "-i": handle_option_id,
+    "-r": handle_option_client_port,
+    "-h": handle_option_server_ip,
+    "-p": handle_option_server_port,
+    "-f": handle_option_command_file,
+    "-o": handle_option_port_offset,
+    "-v": handle_option_verbose,
+  }
+
+  arguments = argv[1:]
+  i = 0
+  while i < len(arguments):
+    if arguments[i] in options.keys():
+      try:
+        ret_val = options[arguments[i]](arguments, i)
+      except:
+        print("Invalid input")
+        return -1
+      if ret_val == -1:
+        return -1
+      elif ret_val == 1:
+        i -= 1
+    i += 2
+
+  if not id or not client_port or not server_ip or not server_port:
+    print("Arguments missing")
+    return -1
+
+  return 0
+
+ret_val = handle_command_line_args()
+if ret_val != -1:
+  log("Publisher process started")
+  handle_command_file()
+  handle_cli_commands()
+else:
+  print("Use: python publisher.py -i ID -r pub_port -h broker_IP -p port [-f command_file -o port_offset -v]")

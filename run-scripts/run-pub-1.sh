@@ -1,0 +1,1 @@
+python publisher.py -i p1 -r 8100 -h 127.0.0.1 -p 8000 -f command-files/publisher-commands-p1.txt

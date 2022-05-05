@@ -1,4 +1,3 @@
-from http import client
 import socket
 from time import sleep
 from sys import argv, exit
@@ -70,14 +69,17 @@ def handle_command_file():
     handle_command(command)
 
 def handle_cli_commands():
-  while True:
-    log("Enter command:")
-    command = input().split(" ")
-    while check_command(command):
-      log("Invalid command")
-      log("Use: <wait time> <sub/unsub> <topic>")
+  try:
+    while True:
+      log("Enter command:")
       command = input().split(" ")
-    handle_command(command)
+      while check_command(command):
+        log("Invalid command")
+        log("Use: <wait time> <sub/unsub> <topic>")
+        command = input().split(" ")
+      handle_command(command)
+  except:
+    return
 
 def handle_option_id(arguments, i):
   global id
@@ -119,10 +121,8 @@ def handle_option_verbose(arguments, i):
   global verbose
   verbose = True
   return 1
-  
 
 def handle_command_line_args():
-  global id, client_port, server_ip, server_port, command_file, port_offset, verbose
 
   options = {
     "-i": handle_option_id,
@@ -135,9 +135,7 @@ def handle_command_line_args():
   }
 
   arguments = argv[1:]
-  print(arguments)
   i = 0
-
   while i < len(arguments):
     if arguments[i] in options.keys():
       try:
@@ -151,41 +149,6 @@ def handle_command_line_args():
         i -= 1
     i += 2
 
-  # i = 0
-  # while i < len(arguments):
-  #   if arguments[i] == "-i":
-  #     id = arguments[i+1]
-  #   elif arguments[i] == "-r":
-  #     try:
-  #       client_port = int(arguments[i+1])
-  #     except: 
-  #       print("Invalid port number")
-  #       return -1
-  #   elif arguments[i] == "-h":
-  #     server_ip = arguments[i+1]
-  #   elif arguments[i] == "-p":
-  #     try:
-  #       server_port = int(arguments[i+1])
-  #     except: 
-  #       print("Invalid port number")
-  #       return -1
-  #   elif arguments[i] == "-f":
-  #     command_file = arguments[i+1]
-  #   elif arguments[i] == "-o":
-  #     try:
-  #       port_offset = int(arguments[i+1])
-  #     except: 
-  #       print("Invalid port number")
-  #       return -1
-  #   elif arguments[i] == "-v":
-  #     verbose = True
-  #     i -= 1
-  #   i += 2
-
-  # id = "s1"
-  # client_port = 9100
-  # server_ip = "127.0.0.1"
-  # server_port = 9000
   if not id or not client_port or not server_ip or not server_port:
     print("Arguments missing")
     return -1

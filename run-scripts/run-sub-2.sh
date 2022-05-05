@@ -1,0 +1,1 @@
+python subscriber.py -i s2 -r 9200 -h 127.0.0.1 -p 9000 -f command-files/subscriber-commands.txt

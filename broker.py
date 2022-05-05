@@ -1,11 +1,11 @@
 import socket
 import threading
 from time import sleep
-import sys
+from sys import exit, argv
 
 host = "127.0.0.1"
-pub_port = 8000      # port that listens for messages from publishers
-sub_port = 9000      # port that listens for messages from subscribers
+pub_port = None      # port that listens for messages from publishers
+sub_port = None      # port that listens for messages from subscribers
 port_offset = 1 # offset for port sends messages to subscribers
 verbose = False
 
@@ -124,9 +124,71 @@ def subthread():
         conn.sendall(b"OK")
       handle_sub_message(data, addr)
 
-log("Broker process started")
-try:
-  threading.Thread(target=pubthread).start()
-  threading.Thread(target=subthread).start()
-except KeyboardInterrupt:
-  sys.exit(0)
+def handle_option_sub_port(arguments, i):
+  global sub_port
+  try:
+    sub_port = int(arguments[i+1])
+  except: 
+    print("Invalid port number")
+    return -1
+
+def handle_option_pub_port(arguments, i):
+  global pub_port
+  try:
+    pub_port = int(arguments[i+1])
+  except: 
+    print("Invalid port number")
+    return -1
+
+def handle_option_port_offset(arguments, i):
+  global port_offset
+  try:
+    port_offset = int(arguments[i+1])
+  except: 
+    print("Invalid port number")
+    return -1
+
+def handle_option_verbose(arguments, i):
+  global verbose
+  verbose = True
+  return 1
+
+def handle_command_line_args():
+  options = {
+    "-s": handle_option_sub_port,
+    "-p": handle_option_pub_port,
+    "-o": handle_option_port_offset,
+    "-v": handle_option_verbose,
+  }
+
+  arguments = argv[1:]
+  i = 0
+  while i < len(arguments):
+    if arguments[i] in options.keys():
+      try:
+        ret_val = options[arguments[i]](arguments, i)
+      except:
+        print("Invalid input")
+        return -1
+      if ret_val == -1:
+        return -1
+      elif ret_val == 1:
+        i -= 1
+    i += 2
+
+  if not sub_port or not pub_port:
+    print("Arguments missing")
+    return -1
+
+  return 0
+
+ret_val = handle_command_line_args()
+if ret_val != -1:
+  log("Broker process started")
+  try:
+    threading.Thread(target=pubthread).start()
+    threading.Thread(target=subthread).start()
+  except KeyboardInterrupt:
+    exit(0)
+else:
+  print("Use: python broker.py -s sub_port -p pub_port [-o port_offset -v]")

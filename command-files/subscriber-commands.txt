@@ -1,4 +1,5 @@
 1 sub #hello
+1 sub #important
 10 unsub #hello
 10 sub #hello
 10 unsub #hello
@@ -12,3 +13,4 @@
 10 unsub #hello
 10 sub #hello
 10 unsub #hello
+0 unsub #important
