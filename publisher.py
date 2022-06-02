@@ -95,14 +95,6 @@ def handle_option_command_file(arguments, i):
   global command_file
   command_file = arguments[i+1]
 
-def handle_option_port_offset(arguments, i):
-  global port_offset
-  try:
-    port_offset = int(arguments[i+1])
-  except: 
-    print("Invalid port number")
-    return -1
-
 def handle_option_verbose(arguments, i):
   global verbose
   verbose = True
@@ -116,7 +108,6 @@ def handle_command_line_args():
     "-h": handle_option_server_ip,
     "-p": handle_option_server_port,
     "-f": handle_option_command_file,
-    "-o": handle_option_port_offset,
     "-v": handle_option_verbose,
   }
 
@@ -147,4 +138,4 @@ if ret_val != -1:
   handle_command_file()
   handle_cli_commands()
 else:
-  print("Use: python publisher.py -i ID -r pub_port -h broker_IP -p port [-f command_file -o port_offset -v]")
+  print("Use: python publisher.py -i ID -r pub_port -h broker_IP -p port [-f command_file -v]")
